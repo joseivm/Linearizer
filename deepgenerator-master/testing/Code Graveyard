@@ -1,0 +1,313 @@
+//		String childLemma = sentence.getLemma(childID);
+//		this.addNewLemma(childLemma);
+//		line+= " 5:"+lemmaToNumber.get(childLemma);
+//		
+//		String headLemma = sentence.getLemma(headID);
+//		this.addNewLemma(headLemma);
+//		line+= " 6:"+lemmaToNumber.get(headLemma);
+		
+		
+		
+		
+//				this.addNewChildPOS("childPOS = "+childPOS);
+//				line+= " " + childPOSToNumber.get(childPOS);
+//				this.addNewHeadPOS(headPOS);
+//				line+= " " + headPOSToNumber.get(headPOS);
+//				this.addNewChildLemma(childLemma);
+//				line+= " "+childLemmaToNumber.get(childLemma);
+//				this.addNewHeadLemma(headLemma);
+//				line+= " "+headLemmaToNumber.get(headLemma);
+
+childHyperNode.areChildrenOrdered(hyperNodeMap)
+
+	// traverses the tree bottom up
+	public void getVerticalOrder(CoNLLHash sentence){
+		
+		ArrayList<String> leaves = sentence.getLeaves();
+		ArrayDeque<String> queue = new ArrayDeque<String>();
+		ArrayList<String> checkedNodes = new ArrayList<String>();
+		queue.addAll(leaves);
+		while(!queue.isEmpty()){
+			String nextNode = (String) queue.removeFirst();
+			if(!sentence.getDeprel(nextNode).equals("ROOT")){
+				String head = sentence.getHead(nextNode);
+				try {
+					this.orderVert(head, nextNode, sentence);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				if(!checkedNodes.contains(head)){
+					queue.addLast(head);
+				}
+			checkedNodes.add(nextNode);
+			
+		}
+		}
+		
+	}
+	
+		// orders two nodes (parent and child), first one is assumed to be the governor
+	public void orderVert(String headID, String childID, CoNLLHash sentence) throws IOException{
+		String relation = sentence.getDeprel(childID);
+		if(!((sentence.getBeforeMap().get(headID).contains(childID))||(sentence.getBeforeMap().get(childID).contains(headID)))){
+		
+			svm_node[] node = new svm_node[6]; // 6 = number of features a pair of words has.
+			
+			String numberOfChildren = ""+sentence.getChilds(headID).size();
+			node[0] = new svm_node();
+			node[0].index = 1;
+			node[0].value = Double.valueOf(numberOfChildren).doubleValue();
+			
+			
+			String childHeight = ""+sentence.getDepth(childID);
+			node[1] = new svm_node();
+			node[1].index = 2;
+			node[1].value = Double.valueOf(childHeight).doubleValue();
+			
+			
+			String childPOS = sentence.getPOS(childID);
+			String thirdFeatureNumber = featureExtractor("childPOS= "+childPOS);
+			node[2] = new svm_node();
+			node[2].index = Integer.parseInt(thirdFeatureNumber);
+			node[2].value = 1;
+					
+			
+			String headPOS = sentence.getPOS(headID);
+			String fourthFeatureNumber = featureExtractor("headPOS= "+headPOS);
+			node[3] = new svm_node();
+			node[3].index = Integer.parseInt(fourthFeatureNumber);
+			node[3].value = 1;
+			
+			
+			String childLemma = sentence.getLemma(childID);
+			String fifthFeatureNumber = featureExtractor("childLemma= "+childLemma);
+			node[4] = new svm_node();
+			node[4].index = Integer.parseInt(fifthFeatureNumber);
+			node[4].value = 1;
+			
+			
+			String headLemma = sentence.getLemma(headID);
+			String sixthFeatureNumber = featureExtractor("headLemma= "+headLemma);
+			node[5] = new svm_node();
+			node[5].index = Integer.parseInt(sixthFeatureNumber);
+			node[5].value = 1;
+			
+			svm_model model = svm.svm_load_model("linearization_svm_"+relation+".svm.model");
+			
+			double prediction = svm.svm_predict(model, node);
+			
+			if(prediction<0){ // -1 means child goes after head, so head is added to child's beforemap.
+				
+				sentence.getBeforeMap().get(childID).add(headID);
+				sentence.getBeforeMap().get(childID).addAll(sentence.getBeforeMap().get(headID));
+				
+			} else{ // 1 means that child goes before the head, so child is added to head's beforemap. 
+				
+				sentence.getBeforeMap().get(headID).add(childID);
+				sentence.getBeforeMap().get(headID).addAll(sentence.getBeforeMap().get(childID));
+			}
+		}
+		
+		}
+		
+			//TODO: CHANGE DIS BIAAATCH
+	public void sideOrder2(String firstNode, String sibling, CoNLLHash sentence) throws IOException{
+		String headID = sentence.getHead(firstNode);
+		
+		svm_node[] node = new svm_node[9];
+		
+		
+		String numberOfChildren = ""+sentence.getChilds(headID).size();
+		node[0] = new svm_node();
+		node[0].index = 1;
+		node[0].value = Double.valueOf(numberOfChildren).doubleValue();
+
+		
+		String firstNodeHeight = ""+sentence.getDepth(firstNode);
+		node[1] = new svm_node();
+		node[1].index = 2;
+		node[1].value = Double.valueOf(firstNodeHeight).doubleValue();
+		
+		
+		String siblingHeight = ""+sentence.getDepth(sibling);
+		node[2] = new svm_node();
+		node[2].index = 3;
+		node[2].value = Double.valueOf(siblingHeight).doubleValue();
+
+		
+		String firstNodePOS = sentence.getPOS(firstNode);
+		String fourthFeatureNumber = sideFeatureExtractor("firstPOS= "+firstNodePOS);
+		node[3] = new svm_node();
+		node[3].index = Integer.parseInt(fourthFeatureNumber);
+		node[3].value = 1;
+		
+		
+		String siblingPOS = sentence.getPOS(sibling);
+		String fifthFeatureNumber = sideFeatureExtractor("siblingPOS= "+siblingPOS);
+		node[4] = new svm_node();
+		node[4].index = Integer.parseInt(fifthFeatureNumber);
+		node[4].value = 1;
+		
+		
+		String firstNodeLemma = sentence.getLemma(firstNode);
+		String sixthFeatureNumber = sideFeatureExtractor("firstLemma= "+firstNodeLemma);
+		node[5] = new svm_node();
+		node[5].index = Integer.parseInt(sixthFeatureNumber);
+		node[5].value = 1;
+		
+		
+		String siblingLemma = sentence.getLemma(sibling);
+		String seventhFeatureNumber = sideFeatureExtractor("siblingLemma= "+siblingLemma);
+		node[6] = new svm_node();
+		node[6].index = Integer.parseInt(seventhFeatureNumber);
+		node[6].value = 1;
+		
+		
+		String headPOS = sentence.getPOS(headID);
+		String eigthFeatureNumber = sideFeatureExtractor("headPOS= "+headPOS);
+		node[7] = new svm_node();
+		node[7].index = Integer.parseInt(eigthFeatureNumber);
+		node[7].value = 1;
+		
+		
+		String headLemma = sentence.getLemma(headID);
+		String ninthFeatureNumber = sideFeatureExtractor("headLemma= "+headLemma);
+		node[8] = new svm_node();
+		node[8].index = Integer.parseInt(ninthFeatureNumber);
+		node[8].value = 1;
+		
+		svm_model model = svm.svm_load_model("linearization_svm_siblings.svm.model");
+		
+		double prediction = svm.svm_predict(model, node);
+		
+		if(prediction<0){ // 1 means that firstNode goes before the sibling. -1 means firstNode goes after sibling.
+			
+			sentence.getBeforeMap().get(firstNode).add(sibling);
+			sentence.getBeforeMap().get(firstNode).addAll(sentence.getBeforeMap().get(sibling));
+			
+		} else{
+			
+			sentence.getBeforeMap().get(sibling).add(firstNode);
+			sentence.getBeforeMap().get(sibling).addAll(sentence.getBeforeMap().get(firstNode));
+		}
+	}
+	
+		// orders siblings
+	public void sideOrder(String firstNode, String sibling, CoNLLHash sentence) throws IOException{
+		if ((!sentence.getBeforeMap().get(sibling).contains(firstNode))&&(!sentence.getBeforeMap().get(firstNode).contains(sibling))){
+			String headID = sentence.getHead(firstNode);
+			
+			svm_node[] node = new svm_node[9];
+			
+			
+			String numberOfChildren = ""+sentence.getChilds(headID).size();
+			node[0] = new svm_node();
+			node[0].index = 1;
+			node[0].value = Double.valueOf(numberOfChildren).doubleValue();
+
+			
+			String firstNodeHeight = ""+sentence.getDepth(firstNode);
+			node[1] = new svm_node();
+			node[1].index = 2;
+			node[1].value = Double.valueOf(firstNodeHeight).doubleValue();
+			
+			
+			String siblingHeight = ""+sentence.getDepth(sibling);
+			node[2] = new svm_node();
+			node[2].index = 3;
+			node[2].value = Double.valueOf(siblingHeight).doubleValue();
+
+			
+			String firstNodePOS = sentence.getPOS(firstNode);
+			String fourthFeatureNumber = sideFeatureExtractor("firstPOS= "+firstNodePOS);
+			node[3] = new svm_node();
+			node[3].index = Integer.parseInt(fourthFeatureNumber);
+			node[3].value = 1;
+			
+			
+			String siblingPOS = sentence.getPOS(sibling);
+			String fifthFeatureNumber = sideFeatureExtractor("siblingPOS= "+siblingPOS);
+			node[4] = new svm_node();
+			node[4].index = Integer.parseInt(fifthFeatureNumber);
+			node[4].value = 1;
+			
+			
+			String firstNodeLemma = sentence.getLemma(firstNode);
+			String sixthFeatureNumber = sideFeatureExtractor("firstLemma= "+firstNodeLemma);
+			node[5] = new svm_node();
+			node[5].index = Integer.parseInt(sixthFeatureNumber);
+			node[5].value = 1;
+			
+			
+			String siblingLemma = sentence.getLemma(sibling);
+			String seventhFeatureNumber = sideFeatureExtractor("siblingLemma= "+siblingLemma);
+			node[6] = new svm_node();
+			node[6].index = Integer.parseInt(seventhFeatureNumber);
+			node[6].value = 1;
+			
+			
+			String headPOS = sentence.getPOS(headID);
+			String eigthFeatureNumber = sideFeatureExtractor("headPOS= "+headPOS);
+			node[7] = new svm_node();
+			node[7].index = Integer.parseInt(eigthFeatureNumber);
+			node[7].value = 1;
+			
+			
+			String headLemma = sentence.getLemma(headID);
+			String ninthFeatureNumber = sideFeatureExtractor("headLemma= "+headLemma);
+			node[8] = new svm_node();
+			node[8].index = Integer.parseInt(ninthFeatureNumber);
+			node[8].value = 1;
+			
+			svm_model model = svm.svm_load_model("linearization_svm_siblings.svm.model");
+			
+			double prediction = svm.svm_predict(model, node);
+			
+			if(prediction<0){ // 1 means that firstNode goes before the sibling. -1 means firstNode goes after sibling.
+				
+				sentence.getBeforeMap().get(firstNode).add(sibling);
+				sentence.getBeforeMap().get(firstNode).addAll(sentence.getBeforeMap().get(sibling));
+				
+			} else{
+				
+				sentence.getBeforeMap().get(sibling).add(firstNode);
+				sentence.getBeforeMap().get(sibling).addAll(sentence.getBeforeMap().get(firstNode));
+			}
+			
+		}
+	}
+	
+		// goes through every word's list of words that go before it and adds that list to its own list
+	// of words that go before it.
+	public void makeTransitive(CoNLLHash sentence){
+		HashMap<String, HashSet<String>> beforeMap = sentence.getBeforeMap();
+		for(String wordID : beforeMap.keySet()){
+			ArrayList<String> tempArray = new ArrayList<String>();
+			HashSet<String> wordsBeforeWord = beforeMap.get(wordID);
+			Iterator<String> it = wordsBeforeWord.iterator();
+			while(it.hasNext()){
+				String wordBefore = it.next();
+				tempArray.addAll(beforeMap.get(wordBefore));
+			}
+			beforeMap.get(wordID).addAll(tempArray);
+		}
+		
+	}
+	
+		// returns an array list with the words in their final 
+	public ArrayList<String> linearize(CoNLLHash sentence){
+		ArrayList<String> properOrder = new ArrayList<String>();
+		ArrayList<String> IDs = sentence.getIds();
+		Iterator<String> it = IDs.iterator();
+		while(it.hasNext()){
+			String wordID = it.next();
+			HashMap<String, HashSet<String>> beforeMap = sentence.getBeforeMap();
+			if(beforeMap.get(wordID).size() > properOrder.size()){
+				properOrder.add(wordID);
+			}else{
+			properOrder.add(beforeMap.get(wordID).size(), wordID);
+			}
+		}
+		return properOrder;
+	}
