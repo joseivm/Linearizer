@@ -27,7 +27,9 @@ public class ModelLinearization {
 	private HashMap <String, BufferedWriter> trainWriters; // A dictionary mapping each dependency relation to the BufferedWriter that will write the training file for its classifier.
 	private HashMap <String, BufferedWriter> testWriters; // A dictionary mapping each dependency relation to the BufferedWriter that will write the test file for its classifier.
 	private ArrayList <String> relations = new ArrayList <String>(); // An ArrayList containing the dependency relations for which classifiers were created.
+	private ArrayList <String> sibRelations = new ArrayList<String>();
 	private ArrayList<String> testRelations = new ArrayList<String>(); // An ArrayList containing the dependency relations for which test files were created.
+	private ArrayList<String> testSibRelations = new ArrayList<String>();
 	private HashMap <String, Integer> relationsNumbers = new HashMap <String,Integer>(); 
 	
 	public ModelLinearization() {
@@ -50,6 +52,14 @@ public class ModelLinearization {
 	 */
 	public ArrayList<String> getRelations(){
 		return new ArrayList<String>(this.relations);
+	}
+	
+	public ArrayList<String> getTestSibRelations(){
+		return new ArrayList<String>(this.testSibRelations);
+	}
+	
+	public ArrayList<String> getSibRelations(){
+		return new ArrayList<String>(this.sibRelations);
 	}
 	
 	/**
@@ -138,24 +148,25 @@ public class ModelLinearization {
 	 */
 	public void addSideLine(String firstNode, String sibling, CoNLLHash sentence, boolean train){
 		String headID = sentence.getHead(firstNode);
-		if (train && trainWriters.get("siblings")==null){
-			relations.add("siblings");
-			relationsNumbers.put("siblings",nextRelation);
+		String headPOS = sentence.getPOS(headID);
+		if (train && trainWriters.get(headPOS+"_siblings")==null){
+			sibRelations.add(headPOS+"_siblings");
+			relationsNumbers.put(headPOS+"_siblings",nextRelation);
 			nextRelation++;
 			try {
-				BufferedWriter bwTrain = new BufferedWriter(new FileWriter("linearization_svm_siblings.svm"));
-				trainWriters.put("siblings",bwTrain);
+				BufferedWriter bwTrain = new BufferedWriter(new FileWriter(headPOS+"_siblings.svm"));
+				trainWriters.put(headPOS+"_siblings",bwTrain);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			
-		} else if(!train && testWriters.get("siblings")==null ){
-			testRelations.add("siblings");
-			relationsNumbers.put("siblings",nextRelation);
+		} else if(!train && testWriters.get(headPOS+"_siblings")==null ){
+			testSibRelations.add(headPOS+"_siblings");
+			relationsNumbers.put(headPOS+"_siblings",nextRelation);
 			nextRelation++;
 			try {
-				BufferedWriter bwTest=new BufferedWriter(new FileWriter("test_"+"siblings"+".svm"));
-				testWriters.put("siblings",bwTest);
+				BufferedWriter bwTest=new BufferedWriter(new FileWriter(headPOS+"_siblings_test.svm"));
+				testWriters.put(headPOS+"_siblings",bwTest);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -179,25 +190,26 @@ public class ModelLinearization {
 				String siblingHeight = ""+sentence.getDepth(sibling);
 				line+= " 3:"+siblingHeight;
 				
+				
 				String firstNodePOS = sentence.getPOS(firstNode);
 				this.addNewSideFeature("firstPOS= "+firstNodePOS);
 				line+= " "+ sideFeatureTranslation.get("firstPOS= "+firstNodePOS);
+				
 				
 				String siblingPOS = sentence.getPOS(sibling);
 				this.addNewSideFeature("siblingPOS= "+siblingPOS);
 				line+= " "+sideFeatureTranslation.get("siblingPOS= "+siblingPOS);
 				
+				
 				String firstNodeLemma = sentence.getLemma(firstNode);
 				this.addNewSideFeature("firstLemma= "+firstNodeLemma);
 				line+=" "+sideFeatureTranslation.get("firstLemma= "+firstNodeLemma);
+				
 				
 				String siblingLemma = sentence.getLemma(sibling);
 				this.addNewSideFeature("siblingLemma= "+siblingLemma);
 				line+= " "+sideFeatureTranslation.get("siblingLemma= "+siblingLemma);
 				
-				String headPOS = sentence.getPOS(headID);
-				this.addNewSideFeature("headPOS= "+headPOS);
-				line+=" "+sideFeatureTranslation.get("headPOS= "+headPOS);
 				
 				String headLemma = sentence.getLemma(headID);
 				this.addNewSideFeature("headLemma= "+headLemma);
@@ -207,11 +219,11 @@ public class ModelLinearization {
 					
 					if (train){	
 						
-						BufferedWriter bw=trainWriters.get("siblings");
+						BufferedWriter bw=trainWriters.get(headPOS+"_siblings");
 						bw.write(line+"\n");
 					}
 					else {
-						BufferedWriter bw2=testWriters.get("siblings");
+						BufferedWriter bw2=testWriters.get(headPOS+"_siblings");
 						bw2.write(line+"\n");
 					}
 				} catch (IOException e) {
@@ -229,7 +241,7 @@ public class ModelLinearization {
 	 * @param sentence: the CoNLLHash object representing the sentence that the child-head pair appears in.
 	 * @param train: boolean used to determine whether we are creating a training file or a test file.
 	 */
-	public void addLine3(String childID, CoNLLHash sentence, boolean train){
+	public void addLine(String childID, CoNLLHash sentence, boolean train){
 		String relation = sentence.getDeprel(childID);
 		String headID = sentence.getHead(childID);
 		if (train && trainWriters.get(relation)==null){
@@ -237,7 +249,7 @@ public class ModelLinearization {
 			relationsNumbers.put(relation,nextRelation);
 			nextRelation++;
 			try {
-				BufferedWriter bwTrain = new BufferedWriter(new FileWriter("linearization_svm_"+relation+".svm"));
+				BufferedWriter bwTrain = new BufferedWriter(new FileWriter("NewTraining/train_"+relation+".svm"));
 				trainWriters.put(relation,bwTrain);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -248,7 +260,7 @@ public class ModelLinearization {
 			relationsNumbers.put(relation,nextRelation);
 			nextRelation++;
 			try {
-				BufferedWriter bwTest=new BufferedWriter(new FileWriter("test_"+relation+".svm"));
+				BufferedWriter bwTest=new BufferedWriter(new FileWriter("NewTesting/test_"+relation+".svm"));
 				testWriters.put(relation,bwTest);
 			} catch (IOException e) {
 				e.printStackTrace();

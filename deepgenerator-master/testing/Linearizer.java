@@ -5,8 +5,10 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -18,6 +20,12 @@ import libsvm.svm_node;
 import deep_to_surf.CoNLLHash;
 import deep_to_surf.CoNLLTreeConstructor;
 
+/**
+ * Linearizer is a class that is used to linearize sentences taken from an annotated corpus. The algorithm used to linearize sentences has an asymptotic runtime
+ * of O(n²). 
+ * @author Jose Ignacio Velarde
+ *
+ */
 public class Linearizer {
 
 	private String filepath;
@@ -27,6 +35,12 @@ public class Linearizer {
 	private HashMap<String,String> featureMap;
 	private HashMap<String, String> sideFeatureMap;
 	
+	/**
+	 * 
+	 * @param sentenceFile: name of the file that contains the annotated sentences to be linearized.
+	 * @param featureMapFile: name of the serializable file that contains the HashMap that was created to train the dependency relation classifiers.
+	 * @param sideFeatFile: name of the serializeable file that contains the HashMap that was created to train the sibling classifier.
+	 */
 	public Linearizer(String sentenceFile, String featureMapFile, String sideFeatFile){
 
 		this.filepath = sentenceFile;
@@ -36,11 +50,10 @@ public class Linearizer {
 	}
 	
 	/**
-	 * Creates the featureMap and sideFeatureMap from .ser files.
+	 * Creates the featureMap and sideFeatureMap from serializable files.
 	 */
 	public void startUp(){
 		this.testSentences = CoNLLTreeConstructor.storeTreebank(filepath);
-		
 
 	      try
 	      {
@@ -71,24 +84,30 @@ public class Linearizer {
 	/**
 	 * This method return the index of the given feature in the feature vector. If the feature
 	 * vector is of the form [POS, Lemma, DEPREL] and this function is given "Lemma" as input,
-	 * it would return "1".
+	 * it would return "1". If the feature isn't a part of a normal feature vector, it will return "none".
 	 * @param feature: String representing a specific feature.
 	 * @return the index that feature corresponds to in the feature vector for ordering nodes vertically.
 	 */
 	public String featureExtractor(String feature){
-		String featureNumber = featureMap.get(feature).split(":")[0];
+		String featureNumber = "none";
+		if(featureMap.containsKey(feature)){
+			featureNumber = featureMap.get(feature).split(":")[0];
+		}
 		return featureNumber;
 	}
 	
 	/**
 	 * This method return the index of the given feature in the feature vector. If the feature
 	 * vector is of the form [POS, Lemma, DEPREL] and this function is given "Lemma" as input,
-	 * it would return "1".
+	 * it would return "1". If the feature isn't a part of a normal feature vector, it will return an empty string.
 	 * @param feature: String representing a specific feature.
 	 * @return the index that feature corresponds to in the feature vector for ordering nodes horizontally.
 	 */
 	public String sideFeatureExtractor(String feature){
-		String sideFeatNumber = sideFeatureMap.get(feature).split(":")[0];
+		String sideFeatNumber = "";
+		if(sideFeatureMap.containsKey(feature)){
+			sideFeatNumber = sideFeatureMap.get(feature).split(":")[0];
+		} 
 		return sideFeatNumber;
 	}
 	
@@ -108,6 +127,8 @@ public class Linearizer {
 			
 			svm_node[] node = new svm_node[6]; // 6 = number of features a pair of words has.
 			
+			int nonFeat = featureMap.size()+1;
+			
 			String numberOfChildren = ""+sentence.getChilds(headID).size();
 			node[0] = new svm_node();
 			node[0].index = 1;
@@ -122,32 +143,53 @@ public class Linearizer {
 			
 			String childPOS = sentence.getPOS(childID);
 			String thirdFeatureNumber = featureExtractor("childPOS= "+childPOS);
-			node[2] = new svm_node();
-			node[2].index = Integer.parseInt(thirdFeatureNumber);
-			node[2].value = 1;
-					
+			if(thirdFeatureNumber.equals("none")){
+				node[2] = new svm_node();
+				node[2].index = nonFeat;
+				node[2].value = 0;
+			} else{
+				node[2] = new svm_node();
+				node[2].index = Integer.parseInt(thirdFeatureNumber);
+				node[2].value = 1;
+			}		
 			
 			String headPOS = sentence.getPOS(headID);
 			String fourthFeatureNumber = featureExtractor("headPOS= "+headPOS);
-			node[3] = new svm_node();
-			node[3].index = Integer.parseInt(fourthFeatureNumber);
-			node[3].value = 1;
-			
+			if(fourthFeatureNumber.equals("none")){
+				node[3] = new svm_node();
+				node[3].index = nonFeat;
+				node[3].value = 0;
+			} else{
+				node[3] = new svm_node();
+				node[3].index = Integer.parseInt(fourthFeatureNumber);
+				node[3].value = 1;
+			}
 			
 			String childLemma = sentence.getLemma(childID);
 			String fifthFeatureNumber = featureExtractor("childLemma= "+childLemma);
-			node[4] = new svm_node();
-			node[4].index = Integer.parseInt(fifthFeatureNumber);
-			node[4].value = 1;
-			
+			if(fifthFeatureNumber.equals("none")){
+				node[4] = new svm_node();
+				node[4].index = nonFeat;
+				node[4].value = 0;
+			} else{
+				node[4] = new svm_node();
+				node[4].index = Integer.parseInt(fifthFeatureNumber);
+				node[4].value = 1;
+			}
 			
 			String headLemma = sentence.getLemma(headID);
 			String sixthFeatureNumber = featureExtractor("headLemma= "+headLemma);
-			node[5] = new svm_node();
-			node[5].index = Integer.parseInt(sixthFeatureNumber);
-			node[5].value = 1;
+			if(sixthFeatureNumber.equals("none")){
+				node[5] = new svm_node();
+				node[5].index = nonFeat;
+				node[5].value = 0;
+			} else{
+				node[5] = new svm_node();
+				node[5].index = Integer.parseInt(sixthFeatureNumber);
+				node[5].value = 1;
+			}
 			
-			svm_model model = svm.svm_load_model("linearization_svm_"+relation+".svm.model");
+			svm_model model = svm.svm_load_model("Classifiers/linearization_svm_"+relation+".svm.model");
 			
 			double prediction = svm.svm_predict(model, node);
 			
@@ -176,10 +218,10 @@ public class Linearizer {
 	 */
 	public void orderVert1(String headID, String childID, CoNLLHash sentence, HashMap<String, HyperNode> map) throws IOException{
 		String relation = sentence.getDeprel(childID);
-//		System.out.println("head is: "+sentence.getForm(headID));
-//		System.out.println("child is: "+sentence.getForm(childID));
 		
 			svm_node[] node = new svm_node[6]; // 6 = number of features a pair of words has.
+			
+			int nonFeat = featureMap.size()+1;
 			
 			String numberOfChildren = ""+sentence.getChilds(headID).size();
 			node[0] = new svm_node();
@@ -195,36 +237,57 @@ public class Linearizer {
 			
 			String childPOS = sentence.getPOS(childID);
 			String thirdFeatureNumber = featureExtractor("childPOS= "+childPOS);
-			node[2] = new svm_node();
-			node[2].index = Integer.parseInt(thirdFeatureNumber);
-			node[2].value = 1;
-					
+			if(thirdFeatureNumber.equals("none")){
+				node[2] = new svm_node();
+				node[2].index = nonFeat;
+				node[2].value = 0;
+			} else{
+				node[2] = new svm_node();
+				node[2].index = Integer.parseInt(thirdFeatureNumber);
+				node[2].value = 1;
+			}		
 			
 			String headPOS = sentence.getPOS(headID);
 			String fourthFeatureNumber = featureExtractor("headPOS= "+headPOS);
-			node[3] = new svm_node();
-			node[3].index = Integer.parseInt(fourthFeatureNumber);
-			node[3].value = 1;
-			
+			if(fourthFeatureNumber.equals("none")){
+				node[3] = new svm_node();
+				node[3].index = nonFeat;
+				node[3].value = 0;
+			} else{
+				node[3] = new svm_node();
+				node[3].index = Integer.parseInt(fourthFeatureNumber);
+				node[3].value = 1;
+			}
 			
 			String childLemma = sentence.getLemma(childID);
 			String fifthFeatureNumber = featureExtractor("childLemma= "+childLemma);
-			node[4] = new svm_node();
-			node[4].index = Integer.parseInt(fifthFeatureNumber);
-			node[4].value = 1;
-			
+			if(fifthFeatureNumber.equals("none")){
+				node[4] = new svm_node();
+				node[4].index = nonFeat;
+				node[4].value = 0;
+			} else{
+				node[4] = new svm_node();
+				node[4].index = Integer.parseInt(fifthFeatureNumber);
+				node[4].value = 1;
+			}
 			
 			String headLemma = sentence.getLemma(headID);
 			String sixthFeatureNumber = featureExtractor("headLemma= "+headLemma);
-			node[5] = new svm_node();
-			node[5].index = Integer.parseInt(sixthFeatureNumber);
-			node[5].value = 1;
+			if(sixthFeatureNumber.equals("none")){
+				node[5] = new svm_node();
+				node[5].index = nonFeat;
+				node[5].value = 0;
+			} else{
+				node[5] = new svm_node();
+				node[5].index = Integer.parseInt(sixthFeatureNumber);
+				node[5].value = 1;
+			}
 			
-			svm_model model = svm.svm_load_model("linearization_svm_"+relation+".svm.model");
+			svm_model model = svm.svm_load_model("Classifiers/linearization_svm_"+relation+".svm.model");
 			
 			double prediction = svm.svm_predict(model, node);
 			
-			if(prediction<0){ // -1 means child goes after head, so .
+			if(prediction<0){ // -1 means child goes after head.
 				
 				HyperNode headHype = map.get(headID);
 				HyperNode childHype = map.get(childID);
@@ -260,6 +323,7 @@ public class Linearizer {
 			
 			svm_node[] node = new svm_node[9];
 			
+			int nonFeat = sideFeatureMap.size()+1;
 			
 			String numberOfChildren = ""+sentence.getChilds(headID).size();
 			node[0] = new svm_node();
@@ -281,59 +345,86 @@ public class Linearizer {
 			
 			String firstNodePOS = sentence.getPOS(firstNode);
 			String fourthFeatureNumber = sideFeatureExtractor("firstPOS= "+firstNodePOS);
-			node[3] = new svm_node();
-			node[3].index = Integer.parseInt(fourthFeatureNumber);
-			node[3].value = 1;
-			
+			if(fourthFeatureNumber.isEmpty()){
+				node[3] = new svm_node();
+				node[3].index = nonFeat;
+				node[3].value = 0;
+			} else{
+				node[3] = new svm_node();
+				node[3].index = Integer.parseInt(fourthFeatureNumber);
+				node[3].value = 1;
+			}
 			
 			String siblingPOS = sentence.getPOS(sibling);
 			String fifthFeatureNumber = sideFeatureExtractor("siblingPOS= "+siblingPOS);
-			node[4] = new svm_node();
-			node[4].index = Integer.parseInt(fifthFeatureNumber);
-			node[4].value = 1;
-			
+			if(fifthFeatureNumber.isEmpty()){
+				node[4] = new svm_node();
+				node[4].index = nonFeat;
+				node[4].value = 0;
+			} else {
+				node[4] = new svm_node();
+				node[4].index = Integer.parseInt(fifthFeatureNumber);
+				node[4].value = 1;
+			}
 			
 			String firstNodeLemma = sentence.getLemma(firstNode);
 			String sixthFeatureNumber = sideFeatureExtractor("firstLemma= "+firstNodeLemma);
-			node[5] = new svm_node();
-			node[5].index = Integer.parseInt(sixthFeatureNumber);
-			node[5].value = 1;
-			
+			if(sixthFeatureNumber.isEmpty()){
+				node[5] = new svm_node();
+				node[5].index = nonFeat;
+				node[5].value = 0;
+			} else{
+				node[5] = new svm_node();
+				node[5].index = Integer.parseInt(sixthFeatureNumber);
+				node[5].value = 1;
+			}
 			
 			String siblingLemma = sentence.getLemma(sibling);
 			String seventhFeatureNumber = sideFeatureExtractor("siblingLemma= "+siblingLemma);
-			node[6] = new svm_node();
-			node[6].index = Integer.parseInt(seventhFeatureNumber);
-			node[6].value = 1;
-			
+			if(seventhFeatureNumber.isEmpty()){
+				node[6] = new svm_node();
+				node[6].index = nonFeat;
+				node[6].value = 0;
+			} else {
+				node[6] = new svm_node();
+				node[6].index = Integer.parseInt(seventhFeatureNumber);
+				node[6].value = 1;
+			}
 			
 			String headPOS = sentence.getPOS(headID);
 			String eigthFeatureNumber = sideFeatureExtractor("headPOS= "+headPOS);
-			node[7] = new svm_node();
-			node[7].index = Integer.parseInt(eigthFeatureNumber);
-			node[7].value = 1;
-			
+			if(eigthFeatureNumber.isEmpty()){
+				node[7] = new svm_node();
+				node[7].index = nonFeat;
+				node[7].value = 0;
+			} else{
+				node[7] = new svm_node();
+				node[7].index = Integer.parseInt(eigthFeatureNumber);
+				node[7].value = 1;
+			}
 			
 			String headLemma = sentence.getLemma(headID);
 			String ninthFeatureNumber = sideFeatureExtractor("headLemma= "+headLemma);
-			node[8] = new svm_node();
-			node[8].index = Integer.parseInt(ninthFeatureNumber);
-			node[8].value = 1;
+			if(ninthFeatureNumber.isEmpty()){
+				node[8] = new svm_node();
+				node[8].index = nonFeat;
+				node[8].value = 0;
+			} else{
+				node[8] = new svm_node();
+				node[8].index = Integer.parseInt(ninthFeatureNumber);
+				node[8].value = 1;
+			}
 			
-			svm_model model = svm.svm_load_model("linearization_svm_siblings.svm.model");
+			svm_model model = svm.svm_load_model("Classifiers/linearization_svm_siblings.svm.model");
 			
 			double prediction = svm.svm_predict(model, node);
 			
-			if(prediction<0){ // 1 means that firstNode goes before the sibling. -1 means firstNode goes after sibling.
-				// TODO: CLEAN UP
-//				beforeMap.get(firstNode).add(sibling);
-//				beforeMap.get(firstNode).addAll(beforeMap.get(sibling));
+			if(prediction<0){ // -1 means firstNode goes after sibling.
+				
 				return "before";
 				
-			} else{
-				//TODO: CLEAN UP
-//				beforeMap.get(sibling).add(firstNode);
-//				beforeMap.get(sibling).addAll(beforeMap.get(firstNode));
+			} else{ // 1 means that firstNode goes before the sibling.
+				
 				return "after";
 			}
 			
@@ -367,6 +458,8 @@ public class Linearizer {
 	 */
 	public void orderOwn(CoNLLHash sentence, String head, HashMap<String, HyperNode> hyperNodeMap) throws IOException{
 		ArrayList<String> children = sentence.getChilds(head);
+//		System.out.println("head: "+head);
+//		System.out.println("children: "+children.toString());
 		HashMap<String, HashSet<String>> beforeMap = new HashMap<String, HashSet<String>>();
 		beforeMap.put(head, new HashSet<String>());
 		
@@ -379,10 +472,11 @@ public class Linearizer {
 		Iterator<String> otherIt = children.iterator(); // Orders every child and its parent
 		while(otherIt.hasNext()){
 			String child = otherIt.next();
-			if(this.orderVert2(head, child, sentence, hyperNodeMap, beforeMap).equals("before")){
+			String headWRTChild = this.orderVert2(head, child, sentence, hyperNodeMap, beforeMap); // headWRTChild = head with respect to child, ie before or after.
+			if(headWRTChild.equals("before")){
 				beforeMap.get(child).add(head);
 				beforeMap.get(child).addAll(beforeMap.get(head));
-			} else if (this.orderVert2(head, child, sentence, hyperNodeMap, beforeMap).equals("after")){
+			} else if (headWRTChild.equals("after")){
 				beforeMap.get(head).add(child);
 				beforeMap.get(head).addAll(beforeMap.get(child));
 			} 
@@ -391,6 +485,7 @@ public class Linearizer {
 		}
 		
 		this.makeTransitive(sentence, beforeMap); 
+//		System.out.println("before sibit: "+ beforeMap.toString());
 		
 		Iterator<String> sideit = children.iterator(); // Orders children with respect to each other.
 		while(sideit.hasNext()){
@@ -399,24 +494,32 @@ public class Linearizer {
 			Iterator<String> sibit = siblings.iterator();
 			while(sibit.hasNext()){
 				String sibling = sibit.next();
-				if(this.sideOrder(child, sibling, sentence, hyperNodeMap, beforeMap).equals("before")){
+				String result = this.sideOrder(child, sibling, sentence, hyperNodeMap, beforeMap);
+				if(result.equals("before")){
+					
 					beforeMap.get(child).add(sibling);
 					beforeMap.get(child).addAll(beforeMap.get(sibling));
-				} else if (this.sideOrder(child, sibling, sentence, hyperNodeMap, beforeMap).equals("after")){
+					this.makeTransitive(sentence, beforeMap);
+//					System.out.println(sibling+" goes before "+child+" "+beforeMap.toString());
+				} else if (result.equals("after")){
+					
 					beforeMap.get(sibling).add(child);
 					beforeMap.get(sibling).addAll(beforeMap.get(child));
+					this.makeTransitive(sentence, beforeMap);
+//					System.out.println(child+" goes before "+sibling+" "+beforeMap.toString());
 				}
 				
 			} 
 			
-		} // ITS ALREADY IN THE HYPERNODE FORM!!!!!!
+		} 
 		
 		this.makeTransitive(sentence, beforeMap);
 		
+//		System.out.println(beforeMap.toString());
+		
 		ArrayList<String> properOrder = this.linearize(sentence, beforeMap); 
 		ArrayList<String> finalForm = new ArrayList<String>();
-//		System.out.println(beforeMap);
-//		System.out.println(properOrder+"\n");
+//		System.out.println(properOrder.toString()+"\n");
 		Iterator<String> wordIt = properOrder.iterator();
 		while(wordIt.hasNext()){ // Replaces all the heads of the hypernodes with all of their surrounding nodes. So for example, if dog is the head of a hypernode of the form 
 			String word = wordIt.next(); // [the,dog], and proper order contains [dog, ran, away], dog would be replaced in that array with [the, dog, ran, away]. 
@@ -434,25 +537,38 @@ public class Linearizer {
 		headHyperNode.form = finalForm;
 		}
 	
-	
+	/**
+	 * This is a helper method for order own, it linearizes a set of words given which word goes before each one.
+	 * @param sentence: CoNLLHash object representing the sentence the words to be linearized appear in.
+	 * @param beforeMap: HashMap mapping words to a set containing the words that come before them.
+	 * @return an ArrayList of the words in their predicted order.
+	 */
 	public ArrayList<String> linearize(CoNLLHash sentence, HashMap<String, HashSet<String>> beforeMap){
 		ArrayList<String> properOrder = new ArrayList<String>();
+		for(int i=0;i<beforeMap.size();i++){
+			properOrder.add(" ");
+			
+		}
 		Set<String> words = beforeMap.keySet();
 		Iterator<String> it = words.iterator();
 		while(it.hasNext()){
 			String wordID = it.next();
-			if(beforeMap.get(wordID).size() > properOrder.size()){
-				properOrder.add(wordID);
-			}else{
-			properOrder.add(beforeMap.get(wordID).size(), wordID);
-			}
+			properOrder.set(beforeMap.get(wordID).size(), wordID);
+//			if(beforeMap.get(wordID).size() > properOrder.size()){
+//				properOrder.add(wordID);
+//			}else{
+//			properOrder.add(beforeMap.get(wordID).size(), wordID);
+//			}
 		}
 		return properOrder;
 	}
-	
-	
-		
 
+	/**
+	 * This method is the main method used to traverse and linearize the dependency tree.
+	 * @param sentence: CoNLLHash object representing the sentence to be linearized.
+	 * @return an ArrayList containing the predicted order of the words in the sentence.
+	 * @throws IOException
+	 */
 	public ArrayList<String> treeTraverser(CoNLLHash sentence) throws IOException{
 		HashMap<String, HyperNode> hyperNodeMap = new HashMap<String, HyperNode>();
 		ArrayList<String> words = sentence.getIds();
@@ -475,10 +591,11 @@ public class Linearizer {
 //			 System.out.println("head is: "+headHyperNode.mainWordString()+"\n");
 			childHyperNode.order(true);
 			if(sentence.getChilds(child).size()>1){
+//				System.out.println("Head: "+childHyperNode.mainWordString());
 				this.orderOwn(sentence, child, hyperNodeMap);
 				
-//				System.out.println("hyperHead is: "+childHyperNode.mainWordString());
-//				System.out.println("hyperNode form is: "+childHyperNode.formString());
+//				System.out.println("hyperHead is: "+childHyperNode.mainWordString());           // PRINT STATEMENTS HERE
+//				System.out.println("hyperNode form is: "+childHyperNode.formString()+"\n");     // PRINT STATEMENTS HERE TOO
 				if(sentence.getDeprel(child).equals("ROOT")){
 					HyperNode rootHyperNode = hyperNodeMap.get(child);
 					return rootHyperNode.form;
@@ -486,11 +603,15 @@ public class Linearizer {
 				this.orderVert1(head, child, sentence, hyperNodeMap);
 			} else{
 				
+				if(sentence.getDeprel(child).equals("ROOT")){
+					HyperNode rootHyperNode = hyperNodeMap.get(child);
+					return rootHyperNode.form;
+				}
 //				System.out.println("head: "+sentence.getForm(head));
 //				System.out.println("child: "+sentence.getForm(child));
 				this.orderVert1(head, child, sentence, hyperNodeMap);
 //				System.out.println("hyperHead is: "+childHyperNode.mainWordString());
-//				System.out.println("hyperNode form is: "+childHyperNode.formString());
+//				System.out.println("hyperNode form is: "+childHyperNode.formString()+"\n");
 			}
 			
 			if(headHyperNode.areChildrenOrdered(hyperNodeMap)){
@@ -513,54 +634,72 @@ public class Linearizer {
 		return new ArrayList<String>();
 	}
 
+	/**
+	 * This method is used to get all of the annotated sentences into CoNLLHash object form and they are then linearized. Their gold standard form is also given, 
+	 * and the predicted linearized form is then used to compute the BLEU score for the linearizer.
+	 * @param args: takes no arguments.
+	 * @throws IOException
+	 */
 	public static void main(String[] args) throws IOException {
 		
 		BufferedWriter candidateFile = new BufferedWriter(new FileWriter("candidateSentences"));
 		BufferedWriter referenceFile = new BufferedWriter(new FileWriter("referenceSentences"));
 		
+		Calendar cal = Calendar.getInstance();
+		SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+		System.out.println("Start Time: "+sdf.format(cal.getTime())+"\n");
+		
 		int sentences = 0;
-		Linearizer liner = new Linearizer("znotsentences","relmap.ser","sideRelMap.ser");
+		Linearizer liner = new Linearizer("zze","relmap.ser","sideRelMap.ser");
 		liner.startUp();
+		
 		Iterator<CoNLLHash> sentenceIt = liner.testSentences.iterator();
 		while(sentenceIt.hasNext()){
 			CoNLLHash sentence = sentenceIt.next();
 			sentences++;
-			System.out.println(sentences);
-			ArrayList<String> result = liner.treeTraverser(sentence);
-			
+			System.out.println(sentences);                                
 			int sentenceLength = sentence.getIds().size();
-			ArrayList<String> idealResult = new ArrayList<String>();
-			
-			String goldStandardForm = "";
-			String predictionFormm = "";
-			
-			for(int i=1;i<sentenceLength+1;i++){      // Creates the ideal form of the sentence, in both array-ID form, and String form.
-				idealResult.add(""+i);
-				String word = sentence.getForm(""+i);
-				goldStandardForm+=" "+word;
-				
+			if(sentenceLength>1){
+				ArrayList<String> result = liner.treeTraverser(sentence);
+
+
+				ArrayList<String> idealResult = new ArrayList<String>();
+
+				String goldStandardForm = "";
+				String predictionFormm = "";
+
+				for(int i=1;i<sentenceLength+1;i++){      // Creates the ideal form of the sentence, in both array-ID form, and String form.
+					idealResult.add(""+i);
+					String word = sentence.getForm(""+i);
+					goldStandardForm+=" "+word;
+
+				}
+				for(int i=0;i<sentenceLength;i++){                        // Converts the predicted sentence into String form.
+					String prediction = result.get(i);
+					String predForm = sentence.getForm(prediction);
+					predictionFormm+=" "+predForm;
+				}
+
+				System.out.println(goldStandardForm);
+				System.out.println(predictionFormm+"\n");
+
+				candidateFile.write(predictionFormm+"\n");
+				referenceFile.write(goldStandardForm+"\n");
+
+
 			}
-			for(int i=0;i<sentenceLength;i++){                        // Converts the predicted sentence into String form.
-				String prediction = result.get(i);
-				String predForm = sentence.getForm(prediction);
-				predictionFormm+=" "+predForm;
-			}
-			
-			System.out.println(goldStandardForm);
-			System.out.println(predictionFormm+"\n");
-			
-			candidateFile.write(predictionFormm+"\n");
-			referenceFile.write(goldStandardForm+"\n");
-			
 		}
-		
-		candidateFile.close();
-		referenceFile.close();
-		
-		String[] argss = new String[2];
-		argss[0] = "referenceSentences";
-		argss[1] = "candidateSentences";
-		
-		BleuMain.main(argss);
+			candidateFile.close();
+			referenceFile.close();
+
+			String[] argss = new String[2];
+			argss[0] = "referenceSentences";
+			argss[1] = "candidateSentences";
+
+			BleuMain.main(argss);
+			
+			Calendar endCal = Calendar.getInstance();
+			SimpleDateFormat sdf1 = new SimpleDateFormat("HH:mm:ss");
+			System.out.println("End Time: "+sdf1.format(endCal.getTime()));
+		}
 	}
-}

@@ -6,76 +6,56 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.StringTokenizer;
 
+import libsvm.svm;
+import libsvm.svm_model;
+import libsvm.svm_node;
 import deep_to_surf.CoNLLHash;
 import deep_to_surf.CoNLLTreeConstructor;
 
 
 public class Testin {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		
 		ArrayList<CoNLLHash> CoNLLArray = CoNLLTreeConstructor.storeTreebank("zSentences5-13");
-		CoNLLHash hash = CoNLLArray.get(2);
+		CoNLLHash sentence = CoNLLArray.get(2);
 		
-		ArrayList<String> ids = hash.getIds();
+		ArrayList<String> ids = sentence.getIds();
 		Iterator<String> it = ids.iterator();
 		while(it.hasNext()){
 			String id = it.next();
 			System.out.println(id);
-		// Column Heads
-//		System.out.printf("%-22s%-22s%-22s%-22s%-22s%-22s%-22s%-22s\n","Head: Child", "HeadPOS", "ChildPOS", "HeadHead","HeadLemma","ChildLemma", "# of Head Deps","Child Height");
-//		System.out.println(" ");
-//		
-//		// This iterates through all the words in a sentence and pairs every word with its head. It then prints out features of both the child and the head.
-//		for(int i = 1;i < hash.sentenceLength();i++){
-//				
-//				String childID = i+"";
-//				String child = hash.getForm(childID);
-//				String childPOS = hash.getPOS(childID);
-//				String childLemma = hash.getLemma(childID);
-//				int childDescendants = hash.getDepth(childID);
-//				
-//				String headID = hash.getHead(childID);
-//				String headPOS;
-//				String headOfHead;
-//				String headLemma;
-//				String head;
-//				int numOfHeadDeps = hash.getChilds(headID).size();
-//				
-//				// Special cases
-//				if (headID.equals("0")){
-//					head = "None";
-//					headPOS = "None";
-//					headOfHead = "None";
-//					headLemma = "None";
-//					
-//				}
-//				else {
-//					head = hash.getForm(headID);
-//					headPOS = hash.getPOS(headID);
-//					headOfHead = hash.getHead(headID);
-//					headLemma = hash.getLemma(headID);
-//				}
-//				
-//				if (headOfHead.equals("0") || headOfHead.equals("None")) {
-//					headOfHead = "None";
-//				}
-//			
-//				else headOfHead = hash.getForm(headOfHead);
-//				
-//				
-//				System.out.printf("%-22s%-22s%-22s%-22s%-22s%-22s%-22s%-22s\n",head+": "+child, headPOS, childPOS, headOfHead,headLemma,childLemma, numOfHeadDeps+"",childDescendants+"");
-//				
-//				
-			
-		}
-		Iterator<String> oit = ids.iterator();
-		
-		while(oit.hasNext()){
-			String id = oit.next();
-			System.out.println(id +"2");
+
 		}
 		
+		ArrayList<String> leaves = sentence.getLeaves();
+		
+		String childID = leaves.get(0);
+		
+		String headID = sentence.getHead(childID);
+		
+		String relation = sentence.getDeprel(childID);
+		System.out.println(relation);
+		
+		svm_node[] node = new svm_node[2]; // 6 = number of features a pair of words has.
+		
+		
+		String numberOfChildren = ""+sentence.getChilds(headID).size();
+		node[0] = new svm_node();
+		node[0].index = 1;
+		node[0].value = Double.valueOf(numberOfChildren).doubleValue();
+		
+		
+		String childHeight = ""+sentence.getDepth(childID);
+		node[1] = new svm_node();
+		node[1].index = 2;
+		node[1].value = Double.valueOf(childHeight).doubleValue();
+		
+		
+		svm_model model = svm.svm_load_model("linearization_svm_"+relation+".svm.model");
+		
+		double prediction = svm.svm_predict(model, node);
+		System.out.println(prediction);
 }
 	
 }

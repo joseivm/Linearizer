@@ -38,14 +38,13 @@ public class CoNLLTreeConstructor {
 		
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(path));
-			
 			CoNLLHash hash = new CoNLLHash();
 			
 			try {
 				int i=0;
 				while(reader.ready()) {
 					String aux = reader.readLine();
-                    if (aux.isEmpty()) {
+                    if (aux.matches("\\s*")) {
                     	list.add(hash);
                         hash = new CoNLLHash();
                         
