@@ -1,0 +1,66 @@
+1	Freddie	freddie	freddie	NNP	NNP	_	_	2	2	NAME	NAME	_	_	_	_	_	_	_	_	_
+2	Mac	mac	mac	NNP	NNP	_	_	3	3	SBJ	SBJ	_	_	A0	_	_	_	_	_	_
+3	said	say	say	VBD	VBD	_	_	0	0	ROOT	ROOT	Y	say.01	_	_	_	_	_	_	_
+4	the	the	the	DT	DT	_	_	8	8	NMOD	NMOD	_	_	_	_	_	_	_	_	_
+5	principal	principal	principal	NN	NN	_	_	7	7	HMOD	HMOD	_	_	_	_	_	_	_	_	_
+6	-	-	-	HYPH	HYPH	_	_	5	5	HYPH	HYPH	_	_	_	_	_	_	_	_	_
+7	only	only	only	RB	RB	_	_	8	8	NMOD	NMOD	_	_	_	_	_	_	_	_	_
+8	securities	security	security	NNS	NNS	_	_	9	9	SBJ	SBJ	_	_	_	A1	A0	_	_	_	_
+9	were	be	be	VBD	VBD	_	_	3	3	OBJ	OBJ	_	_	A1	_	_	_	_	_	_
+10	priced	price	price	VBN	VBN	_	_	9	9	VC	VC	Y	price.01	_	_	_	_	_	_	_
+11	at	at	at	IN	IN	_	_	10	10	ADV	ADV	_	_	_	A2	_	_	_	_	_
+12	58	58	58	CD	CD	_	_	13	13	DEP	DEP	_	_	_	_	_	_	_	_	_
+13	1\/4	1\/4	1\/4	CD	CD	_	_	11	11	PMOD	PMOD	_	_	_	_	_	_	_	_	_
+14	to	to	to	TO	TO	_	_	10	10	OPRD	OPRD	_	_	_	AM-PNC	_	_	_	_	_
+15	yield	yield	yield	VB	VB	_	_	14	14	IM	IM	Y	yield.01	_	_	_	_	_	_	_
+16	8.45	8.45	8.45	CD	CD	_	_	17	17	NMOD	NMOD	_	_	_	_	_	_	_	_	_
+17	%	%	%	NN	NN	_	_	15	15	OBJ	OBJ	_	_	_	_	A1	_	_	_	_
+18	,	,	,	,	,	_	_	3	10	P	P	_	_	_	_	_	_	_	_	_
+19	assuming	assume	assume	VBG	VBG	_	_	3	10	ADV	ADV	Y	assume.02	AM-ADV	_	_	_	_	_	_
+20	an	an	an	DT	DT	_	_	22	22	NMOD	NMOD	_	_	_	_	_	_	_	_	_
+21	average	average	average	JJ	JJ	_	_	22	22	NMOD	NMOD	_	_	_	_	_	_	_	_	_
+22	life	life	life	NN	NN	_	_	19	19	PMOD	OBJ	Y	life.02	_	_	_	A1	_	_	_
+23	of	of	of	IN	IN	_	_	22	22	NMOD	NMOD	_	_	_	_	_	_	A2	_	_
+24	eight	eight	eight	CD	CD	_	_	25	25	NMOD	NMOD	_	_	_	_	_	_	_	_	_
+25	years	years	years	NNS	NNS	_	_	23	23	PMOD	PMOD	_	_	_	_	_	_	_	_	_
+26	and	and	and	CC	CC	_	_	22	22	COORD	COORD	_	_	_	_	_	_	_	_	_
+27	a	a	a	DT	DT	_	_	28	28	NMOD	NMOD	_	_	_	_	_	_	_	_	_
+28	prepayment	prepayment	prepayment	NN	NN	_	_	26	26	CONJ	CONJ	Y	prepayment.01	_	_	_	_	_	_	_
+29	of	of	of	IN	IN	_	_	28	28	NMOD	NMOD	_	_	_	_	_	_	_	A1	_
+30	160	160	160	CD	CD	_	_	31	31	NMOD	NMOD	_	_	_	_	_	_	_	_	_
+31	%	%	%	NN	NN	_	_	29	29	PMOD	PMOD	Y	%.01	_	_	_	_	_	_	_
+32	of	of	of	IN	IN	_	_	31	31	NMOD	NMOD	_	_	_	_	_	_	_	_	A1
+33	the	the	the	DT	DT	_	_	35	35	NMOD	NMOD	_	_	_	_	_	_	_	_	_
+34	PSA	psa	psa	NNP	NNP	_	_	35	35	NMOD	NMOD	_	_	_	_	_	_	_	_	_
+35	model	model	model	NN	NN	_	_	32	32	PMOD	PMOD	_	_	_	_	_	_	_	_	_
+36	.	.	.	.	.	_	_	3	3	P	P	_	_	_	_	_	_	_	_	_
+						
+1	The	the	the	DT	DT	_	_	5	5	NMOD	NMOD	_	_	_	_
+2	interest	interest	interest	NN	NN	_	_	4	4	HMOD	HMOD	_	_	_	_
+3	-	-	-	HYPH	HYPH	_	_	2	2	HYPH	HYPH	_	_	_	_
+4	only	only	only	RB	RB	_	_	5	5	NMOD	NMOD	_	_	_	_
+5	securities	security	security	NNS	NNS	_	_	6	6	SBJ	SBJ	_	_	A1	A0
+6	were	be	be	VBD	VBD	_	_	0	0	ROOT	ROOT	_	_	_	_
+7	priced	price	price	VBN	VBN	_	_	6	6	VC	VC	Y	price.01	_	_
+8	at	at	at	IN	IN	_	_	7	7	ADV	ADV	_	_	A2	_
+9	35	35	35	CD	CD	_	_	10	10	DEP	DEP	_	_	_	_
+10	1\/2	1\/2	1\/2	CD	CD	_	_	8	8	PMOD	PMOD	_	_	_	_
+11	to	to	to	TO	TO	_	_	7	7	OPRD	OPRD	_	_	AM-PNC	_
+12	yield	yield	yield	VB	VB	_	_	11	11	IM	IM	Y	yield.01	_	_
+13	10.72	10.72	10.72	CD	CD	_	_	14	14	NMOD	NMOD	_	_	_	_
+14	%	%	%	NN	NN	_	_	12	12	OBJ	OBJ	_	_	_	A1
+15	.	.	.	.	.	_	_	6	6	P	P	_	_	_	_
+						
+1	There	there	there	EX	EX	_	_	2	2	SBJ	SBJ	_	_	_	_
+2	were	be	be	VBD	VBD	_	_	0	0	ROOT	ROOT	_	_	_	_
+3	no	no	no	DT	DT	_	_	9	5	NMOD	NMOD	_	_	_	AM-NEG
+4	major	major	major	JJ	JJ	_	_	9	5	NMOD	NMOD	_	_	_	_
+5	Eurobond	eurobond	eurobond	NNP	NN	_	_	9	2	NMOD	PRD	_	_	_	A1
+6	or	or	or	CC	CC	_	_	5	5	COORD	COORD	_	_	_	_
+7	foreign	foreign	foreign	JJ	JJ	_	_	8	8	NMOD	NMOD	_	_	AM-LOC	_
+8	bond	bond	bond	NN	NN	_	_	6	6	CONJ	CONJ	Y	bond.01	_	_
+9	offerings	offering	offering	NNS	NNS	_	_	2	2	PRD	PRD	Y	offering.01	_	_
+10	in	in	in	IN	IN	_	_	2	2	LOC	LOC	_	_	_	AM-LOC
+11	Europe	europe	europe	NNP	NNP	_	_	10	10	PMOD	PMOD	_	_	_	_
+12	Friday	friday	friday	NNP	NNP	_	_	2	2	TMP	TMP	_	_	_	AM-TMP
+13	.	.	.	.	.	_	_	2	2	P	P	_	_	_	_					

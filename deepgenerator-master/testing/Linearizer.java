@@ -826,7 +826,10 @@ public class Linearizer {
 		System.out.println("Start Time: "+sdf.format(cal.getTime())+"\n");
 		
 		int sentences = 0;
-		Linearizer liner = new Linearizer("Sentences/Evaluation Set","relmap.ser","sideRelMapDep.ser");
+
+
+		Linearizer liner = new Linearizer("Sentences/Evaluation Set","relmap.ser","sideRelMap.ser");
+
 		liner.startUp();
 		
 		Iterator<CoNLLHash> sentenceIt = liner.testSentences.iterator();
