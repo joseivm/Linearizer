@@ -311,3 +311,31 @@ childHyperNode.areChildrenOrdered(hyperNodeMap)
 		}
 		return properOrder;
 	}
+	
+		HashMap<String, String> sideFeatureMap = new HashMap<String, String>();
+		 try
+	      {
+	         
+	         FileInputStream sideFeatMapInputStream = new FileInputStream("sideRelMapDep.ser");
+
+	  
+	         ObjectInputStream sideFeatMapObjectStream = new ObjectInputStream(sideFeatMapInputStream);
+
+	         
+	         sideFeatureMap = (HashMap) sideFeatMapObjectStream.readObject();
+
+	         
+	         sideFeatMapObjectStream.close();
+	         sideFeatMapInputStream.close();
+	         
+
+	         
+	      }catch(IOException ioe)
+	      {
+	         ioe.printStackTrace();
+	         return;
+	      } catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		

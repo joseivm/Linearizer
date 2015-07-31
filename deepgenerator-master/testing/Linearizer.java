@@ -32,8 +32,12 @@ public class Linearizer {
 	private ArrayList<CoNLLHash> testSentences;
 	private String featureMapf;
 	private String sideMapf;
+	private String sideMapDepf;
+	private String sideRelListf;
+	private ArrayList<String> sideRelList;
 	private HashMap<String,String> featureMap;
 	private HashMap<String, String> sideFeatureMap;
+	private HashMap<String, String> sideFeatureMapDep;
 	
 	/**
 	 * 
@@ -46,6 +50,8 @@ public class Linearizer {
 		this.filepath = sentenceFile;
 		this.featureMapf = featureMapFile;
 		this.sideMapf = sideFeatFile;
+//		this.sideMapDepf = sideFeatDepFile;
+//		this.sideRelListf = sideRelListFile;
 		
 	}
 	
@@ -59,17 +65,30 @@ public class Linearizer {
 	      {
 	         FileInputStream featureMapInputStream = new FileInputStream(featureMapf);
 	         FileInputStream sideFeatMapInputStream = new FileInputStream(sideMapf);
+//	         FileInputStream sideRelListInputStream = new FileInputStream(sideRelListf);
+//	         FileInputStream sideRelDepMapInputStream = new FileInputStream(sideMapDepf);
 	         
 	         ObjectInputStream featMapObjectStream = new ObjectInputStream(featureMapInputStream);
 	         ObjectInputStream sideFeatMapObjectStream = new ObjectInputStream(sideFeatMapInputStream);
+//	         ObjectInputStream sideRelListObjectStream = new ObjectInputStream(sideRelListInputStream);
+//	         ObjectInputStream sideRelDepMapObjectStream = new ObjectInputStream(sideRelDepMapInputStream);
 	         
 	         this.featureMap = (HashMap) featMapObjectStream.readObject();
 	         this.sideFeatureMap = (HashMap) sideFeatMapObjectStream.readObject();
+//	         this.sideRelList = (ArrayList) sideRelListObjectStream.readObject();
+//	         this.sideFeatureMapDep = (HashMap) sideRelDepMapObjectStream.readObject();
 	         
 	         featMapObjectStream.close();
 	         featureMapInputStream.close();
+	         
 	         sideFeatMapObjectStream.close();
 	         sideFeatMapInputStream.close();
+	         
+//	         sideRelListObjectStream.close();
+//	         sideRelListInputStream.close();
+//	         
+//	         sideRelDepMapObjectStream.close();
+//	         sideRelDepMapInputStream.close();
 	         
 	      }catch(IOException ioe)
 	      {
@@ -107,6 +126,14 @@ public class Linearizer {
 		String sideFeatNumber = "";
 		if(sideFeatureMap.containsKey(feature)){
 			sideFeatNumber = sideFeatureMap.get(feature).split(":")[0];
+		} 
+		return sideFeatNumber;
+	}
+	
+	public String sideFeatureDepExtractor(String feature){
+		String sideFeatNumber = "";
+		if(sideFeatureMapDep.containsKey(feature)){
+			sideFeatNumber = sideFeatureMapDep.get(feature).split(":")[0];
 		} 
 		return sideFeatNumber;
 	}
@@ -307,6 +334,150 @@ public class Linearizer {
 		
 	}
 	
+	//TODO: FIX DICTIONARY CALLS IE FEATURE EXTRACTOR AND MAKE SURE EVERYTHING IS CALLING THE RIGHT DICT.
+	public String sideOrder2(String sib1, String sib2, CoNLLHash sentence, HashMap<String, HyperNode> map, HashMap<String, HashSet<String>> beforeMap) throws IOException{
+		if((!beforeMap.get(sib1).contains(sib2))&&(!beforeMap.get(sib2).contains(sib1))){
+			
+			String firstRel = sentence.getDeprel(sib1);
+			String secondRel = sentence.getDeprel(sib2);
+			String relPair = firstRel+secondRel;
+			String firstNode = sib1;
+			String sibling = sib2;
+			
+			if(sideRelList.contains(secondRel+firstRel+"_siblings")){
+				firstNode = sib2;
+				sibling = sib1;
+				relPair = secondRel+firstRel;
+			} else if(!sideRelList.contains(firstRel+secondRel+"_siblings")){
+				return this.sideOrder(sib1, sib2, sentence, map, beforeMap);
+			}
+			
+			String headID = sentence.getHead(sib1);
+			
+			svm_node[] node = new svm_node[10];
+			
+			int nonFeat = sideFeatureMap.size()+1;
+			
+			String numberOfChildren = ""+sentence.getChilds(headID).size();
+			node[0] = new svm_node();
+			node[0].index = 1;
+			node[0].value = Double.valueOf(numberOfChildren).doubleValue();
+
+			
+			String firstNodeHeight = ""+sentence.getDepth(firstNode);
+			node[1] = new svm_node();
+			node[1].index = 2;
+			node[1].value = Double.valueOf(firstNodeHeight).doubleValue();
+			
+			
+			String siblingHeight = ""+sentence.getDepth(sibling);
+			node[2] = new svm_node();
+			node[2].index = 3;
+			node[2].value = Double.valueOf(siblingHeight).doubleValue();
+
+			
+			String firstNodePOS = sentence.getPOS(firstNode);
+			String fourthFeatureNumber = sideFeatureDepExtractor("firstPOS= "+firstNodePOS);
+			if(fourthFeatureNumber.isEmpty()){
+				node[3] = new svm_node();
+				node[3].index = nonFeat;
+				node[3].value = 0;
+			} else{
+				node[3] = new svm_node();
+				node[3].index = Integer.parseInt(fourthFeatureNumber);
+				node[3].value = 1;
+			}
+			
+			String siblingPOS = sentence.getPOS(sibling);
+			String fifthFeatureNumber = sideFeatureDepExtractor("siblingPOS= "+siblingPOS);
+			if(fifthFeatureNumber.isEmpty()){
+				node[4] = new svm_node();
+				node[4].index = nonFeat;
+				node[4].value = 0;
+			} else {
+				node[4] = new svm_node();
+				node[4].index = Integer.parseInt(fifthFeatureNumber);
+				node[4].value = 1;
+			}
+			
+			String headPOS = sentence.getPOS(headID);
+			String sixthFeatureNumber = sideFeatureDepExtractor("headPOS= "+headPOS);
+			if(sixthFeatureNumber.isEmpty()){
+				node[5] = new svm_node();
+				node[5].index = nonFeat;
+				node[5].value = 0;
+			} else{
+				node[5] = new svm_node();
+				node[5].index = Integer.parseInt(sixthFeatureNumber);
+				node[5].value = 1;
+			}
+			
+			String firstNodeLemma = sentence.getLemma(firstNode);
+			String seventhFeatureNumber = sideFeatureDepExtractor("firstLemma= "+firstNodeLemma);
+			if(seventhFeatureNumber.isEmpty()){
+				node[6] = new svm_node();
+				node[6].index = nonFeat;
+				node[6].value = 0;
+			} else{
+				node[6] = new svm_node();
+				node[6].index = Integer.parseInt(seventhFeatureNumber);
+				node[6].value = 1;
+			}
+			
+			String siblingLemma = sentence.getLemma(sibling);
+			String eigthFeatureNumber = sideFeatureDepExtractor("siblingLemma= "+siblingLemma);
+			if(eigthFeatureNumber.isEmpty()){
+				node[7] = new svm_node();
+				node[7].index = nonFeat;
+				node[7].value = 0;
+			} else {
+				node[7] = new svm_node();
+				node[7].index = Integer.parseInt(eigthFeatureNumber);
+				node[7].value = 1;
+			}
+			
+			
+			String headLemma = sentence.getLemma(headID);
+			String ninthFeatureNumber = sideFeatureDepExtractor("headLemma= "+headLemma);
+			if(ninthFeatureNumber.isEmpty()){
+				node[8] = new svm_node();
+				node[8].index = nonFeat;
+				node[8].value = 0;
+			} else{
+				node[8] = new svm_node();
+				node[8].index = Integer.parseInt(ninthFeatureNumber);
+				node[8].value = 1;
+			}
+			
+			
+			String headRel = sentence.getDeprel(headID);
+			String tenthFeatureNumber = sideFeatureDepExtractor("headRel= "+headRel);
+			if(tenthFeatureNumber.isEmpty()){
+				node[9] = new svm_node();
+				node[9].index = nonFeat;
+				node[9].value = 0;
+			} else{
+				node[9] = new svm_node();
+				node[9].index = Integer.parseInt(tenthFeatureNumber);
+				node[9].value = 1;
+			}
+			
+			svm_model model = svm.svm_load_model("Sibling Dep Models/"+relPair+"_siblings.svm.model");
+//			System.out.println(relPair+"_siblings.svm.model");
+			double prediction = svm.svm_predict(model, node);
+			
+			if(prediction<0){ // -1 means firstNode goes after sibling.
+				
+				return "before";
+				
+			} else{ // 1 means that firstNode goes before the sibling.
+				
+				return "after";
+			}
+		} return "none";
+			
+	}
+	
 	/**
 	 * Orders a pair of siblings in a dependency tree.
 	 * @param firstNode: ID of the first node in a sibling pair.
@@ -415,7 +586,8 @@ public class Linearizer {
 				node[8].value = 1;
 			}
 			
-			svm_model model = svm.svm_load_model("Classifiers/linearization_svm_siblings.svm.model");
+//			svm_model model = svm.svm_load_model("Classifiers/linearization_svm_siblings.svm.model");
+			svm_model model = svm.svm_load_model("new_siblings.svm.model");
 			
 			double prediction = svm.svm_predict(model, node);
 			
@@ -476,9 +648,13 @@ public class Linearizer {
 			if(headWRTChild.equals("before")){
 				beforeMap.get(child).add(head);
 				beforeMap.get(child).addAll(beforeMap.get(head));
+//				System.out.println(sentence.getForm(head)+" goes before "+sentence.getForm(child));
+//				System.out.println(head+" goes before "+child);
 			} else if (headWRTChild.equals("after")){
 				beforeMap.get(head).add(child);
 				beforeMap.get(head).addAll(beforeMap.get(child));
+//				System.out.println(sentence.getForm(child)+" goes before "+sentence.getForm(head));
+//				System.out.println(child+" goes before "+head);
 			} 
 			
 			
@@ -650,7 +826,7 @@ public class Linearizer {
 		System.out.println("Start Time: "+sdf.format(cal.getTime())+"\n");
 		
 		int sentences = 0;
-		Linearizer liner = new Linearizer("zze","relmap.ser","sideRelMap.ser");
+		Linearizer liner = new Linearizer("Sentences/Evaluation Set","relmap.ser","sideRelMapDep.ser");
 		liner.startUp();
 		
 		Iterator<CoNLLHash> sentenceIt = liner.testSentences.iterator();
