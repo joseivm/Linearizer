@@ -1,6 +1,7 @@
 package testing;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -28,6 +29,8 @@ import deep_to_surf.CoNLLTreeConstructor;
  */
 public class Linearizer {
 
+	
+//	TODO: INVESTIGATE NEW_SIBLING CLASSIFIER, TEST AGAIN
 	private String filepath;
 	private ArrayList<CoNLLHash> testSentences;
 	private String featureMapf;
@@ -55,6 +58,16 @@ public class Linearizer {
 		
 	}
 	
+	public Linearizer(String sentenceFile, String featureMapFile, String sideFeatFile, String sideFeatDepFile){
+
+		this.filepath = sentenceFile;
+		this.featureMapf = featureMapFile;
+		this.sideMapf = sideFeatFile;
+		this.sideMapDepf = sideFeatDepFile;
+//		this.sideRelListf = sideRelListFile;
+		
+	}
+	
 	/**
 	 * Creates the featureMap and sideFeatureMap from serializable files.
 	 */
@@ -66,17 +79,17 @@ public class Linearizer {
 	         FileInputStream featureMapInputStream = new FileInputStream(featureMapf);
 	         FileInputStream sideFeatMapInputStream = new FileInputStream(sideMapf);
 //	         FileInputStream sideRelListInputStream = new FileInputStream(sideRelListf);
-//	         FileInputStream sideRelDepMapInputStream = new FileInputStream(sideMapDepf);
+	         FileInputStream sideRelDepMapInputStream = new FileInputStream(sideMapDepf);
 	         
 	         ObjectInputStream featMapObjectStream = new ObjectInputStream(featureMapInputStream);
 	         ObjectInputStream sideFeatMapObjectStream = new ObjectInputStream(sideFeatMapInputStream);
 //	         ObjectInputStream sideRelListObjectStream = new ObjectInputStream(sideRelListInputStream);
-//	         ObjectInputStream sideRelDepMapObjectStream = new ObjectInputStream(sideRelDepMapInputStream);
+	         ObjectInputStream sideRelDepMapObjectStream = new ObjectInputStream(sideRelDepMapInputStream);
 	         
 	         this.featureMap = (HashMap) featMapObjectStream.readObject();
 	         this.sideFeatureMap = (HashMap) sideFeatMapObjectStream.readObject();
 //	         this.sideRelList = (ArrayList) sideRelListObjectStream.readObject();
-//	         this.sideFeatureMapDep = (HashMap) sideRelDepMapObjectStream.readObject();
+	         this.sideFeatureMapDep = (HashMap) sideRelDepMapObjectStream.readObject();
 	         
 	         featMapObjectStream.close();
 	         featureMapInputStream.close();
@@ -87,8 +100,8 @@ public class Linearizer {
 //	         sideRelListObjectStream.close();
 //	         sideRelListInputStream.close();
 //	         
-//	         sideRelDepMapObjectStream.close();
-//	         sideRelDepMapInputStream.close();
+	         sideRelDepMapObjectStream.close();
+	         sideRelDepMapInputStream.close();
 	         
 	      }catch(IOException ioe)
 	      {
@@ -341,138 +354,207 @@ public class Linearizer {
 			String firstRel = sentence.getDeprel(sib1);
 			String secondRel = sentence.getDeprel(sib2);
 			String relPair = firstRel+secondRel;
+			String otherRelPair = secondRel+firstRel;
 			String firstNode = sib1;
 			String sibling = sib2;
 			
-			if(sideRelList.contains(secondRel+firstRel+"_siblings")){
+			File option1 = new File("Sibling Dep Files/Mixed/Classifiers/"+relPair+"_siblings.svm.model");
+			File option2 = new File("Sibling Dep Files/Mixed/Classifiers/"+otherRelPair+"_siblings.svm.model");
+			
+			if(option2.exists()){
 				firstNode = sib2;
 				sibling = sib1;
 				relPair = secondRel+firstRel;
-			} else if(!sideRelList.contains(firstRel+secondRel+"_siblings")){
+			} else if(!option1.exists()){
+				System.out.println("sideorder");
 				return this.sideOrder(sib1, sib2, sentence, map, beforeMap);
 			}
 			
+			
 			String headID = sentence.getHead(sib1);
 			
-			svm_node[] node = new svm_node[10];
+			int numberOfSiblings = sentence.getSiblingss(sib1).size();
+			
+			svm_node[] node = new svm_node[numberOfSiblings*2+7];
 			
 			int nonFeat = sideFeatureMap.size()+1;
 			
-			String numberOfChildren = ""+sentence.getChilds(headID).size();
-			node[0] = new svm_node();
-			node[0].index = 1;
-			node[0].value = Double.valueOf(numberOfChildren).doubleValue();
-
-			
-			String firstNodeHeight = ""+sentence.getDepth(firstNode);
-			node[1] = new svm_node();
-			node[1].index = 2;
-			node[1].value = Double.valueOf(firstNodeHeight).doubleValue();
-			
-			
-			String siblingHeight = ""+sentence.getDepth(sibling);
-			node[2] = new svm_node();
-			node[2].index = 3;
-			node[2].value = Double.valueOf(siblingHeight).doubleValue();
-
 			
 			String firstNodePOS = sentence.getPOS(firstNode);
-			String fourthFeatureNumber = sideFeatureDepExtractor("firstPOS= "+firstNodePOS);
+			String firstFeatureNumber = sideFeatureDepExtractor("firstPOS= "+firstNodePOS);
+			if(firstFeatureNumber.isEmpty()){
+				node[0] = new svm_node();
+				node[0].index = nonFeat;
+				node[0].value = 0;
+				System.out.println("not a feat");
+			} else{
+				node[0] = new svm_node();
+				node[0].index = Integer.parseInt(firstFeatureNumber);
+				node[0].value = 1;
+			}
+			
+			String siblingPOS = sentence.getPOS(sibling);
+			String secondFeatureNumber = sideFeatureDepExtractor("siblingPOS= "+siblingPOS);
+			if(secondFeatureNumber.isEmpty()){
+				node[1] = new svm_node();
+				node[1].index = nonFeat;
+				node[1].value = 0;
+				System.out.println("not a feat");
+			} else {
+				node[1] = new svm_node();
+				node[1].index = Integer.parseInt(secondFeatureNumber);
+				node[1].value = 1;
+			}
+			
+			String headPOS = sentence.getPOS(headID);
+			String thirdFeatureNumber = sideFeatureDepExtractor("headPOS= "+headPOS);
+			if(thirdFeatureNumber.isEmpty()){
+				node[2] = new svm_node();
+				node[2].index = nonFeat;
+				node[2].value = 0;
+				System.out.println("not a feat");
+			} else{
+				node[2] = new svm_node();
+				node[2].index = Integer.parseInt(thirdFeatureNumber);
+				node[2].value = 1;
+			}
+			
+			String firstNodeLemma = sentence.getLemma(firstNode);
+			String fourthFeatureNumber = sideFeatureDepExtractor("firstLemma= "+firstNodeLemma);
 			if(fourthFeatureNumber.isEmpty()){
 				node[3] = new svm_node();
 				node[3].index = nonFeat;
 				node[3].value = 0;
+				System.out.println("not a feat");
 			} else{
 				node[3] = new svm_node();
 				node[3].index = Integer.parseInt(fourthFeatureNumber);
 				node[3].value = 1;
 			}
 			
-			String siblingPOS = sentence.getPOS(sibling);
-			String fifthFeatureNumber = sideFeatureDepExtractor("siblingPOS= "+siblingPOS);
+			String siblingLemma = sentence.getLemma(sibling);
+			String fifthFeatureNumber = sideFeatureDepExtractor("siblingLemma= "+siblingLemma);
 			if(fifthFeatureNumber.isEmpty()){
 				node[4] = new svm_node();
 				node[4].index = nonFeat;
 				node[4].value = 0;
+				System.out.println("not a feat");
 			} else {
 				node[4] = new svm_node();
 				node[4].index = Integer.parseInt(fifthFeatureNumber);
 				node[4].value = 1;
 			}
 			
-			String headPOS = sentence.getPOS(headID);
-			String sixthFeatureNumber = sideFeatureDepExtractor("headPOS= "+headPOS);
+			
+			String headLemma = sentence.getLemma(headID);
+			String sixthFeatureNumber = sideFeatureDepExtractor("headLemma= "+headLemma);
 			if(sixthFeatureNumber.isEmpty()){
 				node[5] = new svm_node();
 				node[5].index = nonFeat;
 				node[5].value = 0;
+				System.out.println("not a feat");
 			} else{
 				node[5] = new svm_node();
 				node[5].index = Integer.parseInt(sixthFeatureNumber);
 				node[5].value = 1;
 			}
 			
-			String firstNodeLemma = sentence.getLemma(firstNode);
-			String seventhFeatureNumber = sideFeatureDepExtractor("firstLemma= "+firstNodeLemma);
+			
+			String headRel = sentence.getDeprel(headID);
+			String seventhFeatureNumber = sideFeatureDepExtractor("headRel= "+headRel);
 			if(seventhFeatureNumber.isEmpty()){
 				node[6] = new svm_node();
 				node[6].index = nonFeat;
 				node[6].value = 0;
+				System.out.println("not a feat");
 			} else{
 				node[6] = new svm_node();
 				node[6].index = Integer.parseInt(seventhFeatureNumber);
 				node[6].value = 1;
 			}
 			
-			String siblingLemma = sentence.getLemma(sibling);
-			String eigthFeatureNumber = sideFeatureDepExtractor("siblingLemma= "+siblingLemma);
-			if(eigthFeatureNumber.isEmpty()){
-				node[7] = new svm_node();
-				node[7].index = nonFeat;
-				node[7].value = 0;
-			} else {
-				node[7] = new svm_node();
-				node[7].index = Integer.parseInt(eigthFeatureNumber);
-				node[7].value = 1;
+			int currentNode = 7;
+			
+			ArrayList<String> otherSiblings = sentence.getSiblingss(sib1);
+			Iterator<String> sibIt = otherSiblings.iterator();
+			while(sibIt.hasNext()){
+				String otherSib = sibIt.next();
+				if(!otherSib.equals(sib2)){
+					String otherSibRel = sentence.getDeprel(otherSib);
+					String featureNumber = sideFeatureDepExtractor("other sibling rel = "+otherSibRel);
+					if(featureNumber.isEmpty()){
+						node[currentNode] = new svm_node();
+						node[currentNode].index = nonFeat;
+						node[currentNode].value = 0;
+						System.out.println("not a feat");
+					} else{
+						node[currentNode] = new svm_node();
+						node[currentNode].index = Integer.parseInt(featureNumber);
+						node[currentNode].value = 1;
+					}
+					currentNode++;
+				}
 			}
 			
-			
-			String headLemma = sentence.getLemma(headID);
-			String ninthFeatureNumber = sideFeatureDepExtractor("headLemma= "+headLemma);
-			if(ninthFeatureNumber.isEmpty()){
-				node[8] = new svm_node();
-				node[8].index = nonFeat;
-				node[8].value = 0;
-			} else{
-				node[8] = new svm_node();
-				node[8].index = Integer.parseInt(ninthFeatureNumber);
-				node[8].value = 1;
+			while(currentNode<numberOfSiblings*2+7){
+				node[currentNode] = new svm_node();
+				node[currentNode].index = nonFeat;
+				node[currentNode].value = 0;
+				currentNode++;
 			}
 			
+//			ArrayList<String> otherSiblings = sentence.getSiblingss(sib1);
+//			Iterator<String> osibIt = otherSiblings.iterator();
+//			while(osibIt.hasNext()){
+//				String otherSib = sibIt.next();
+//				if(!otherSib.equals(sib2)){
+//					String otherSibPOS = sentence.getPOS(otherSib);
+//					String featureNumber = sideFeatureDepExtractor("other sibling POS = "+otherSibPOS);
+//					if(featureNumber.isEmpty()){
+//						node[currentNode] = new svm_node();
+//						node[currentNode].index = nonFeat;
+//						node[currentNode].value = 0;
+//					} else{
+//						node[currentNode] = new svm_node();
+//						node[currentNode].index = Integer.parseInt(featureNumber);
+//						node[currentNode].value = 1;
+//					}
+//					currentNode++;
+//				}
+//			}
 			
-			String headRel = sentence.getDeprel(headID);
-			String tenthFeatureNumber = sideFeatureDepExtractor("headRel= "+headRel);
-			if(tenthFeatureNumber.isEmpty()){
-				node[9] = new svm_node();
-				node[9].index = nonFeat;
-				node[9].value = 0;
-			} else{
-				node[9] = new svm_node();
-				node[9].index = Integer.parseInt(tenthFeatureNumber);
-				node[9].value = 1;
-			}
 			
-			svm_model model = svm.svm_load_model("Sibling Dep Models/"+relPair+"_siblings.svm.model");
-//			System.out.println(relPair+"_siblings.svm.model");
+			svm_model model = svm.svm_load_model("Sibling Dep Files/Deprel/Classifiers/"+relPair+"_siblings.svm.model");
 			double prediction = svm.svm_predict(model, node);
+//			System.out.println(prediction);
 			
+			Integer firstNodeint = new Integer(firstNode);
+			Integer sibint = new Integer(sibling);
+//			System.out.println("first Node place: "+firstNodeint);
+//			System.out.println("sibling place: "+sibint);
 			if(prediction<0){ // -1 means firstNode goes after sibling.
-				
-				return "before";
+//				System.out.println("prediction: first node goes after sibling");
+//				System.out.println("first node is: "+sentence.getForm(firstNode));
+//				System.out.println("sibling is: "+sentence.getForm(sibling));
+				if(firstNodeint<sibint){
+					System.out.println("wrong!");
+				} else{
+					System.out.println("correct");
+				}
+				return "before"; //original
+//				return "after";
 				
 			} else{ // 1 means that firstNode goes before the sibling.
-				
-				return "after";
+//				System.out.println("prediction: first node goes before sibling");
+//				System.out.println("first node is: "+sentence.getForm(firstNode));
+//				System.out.println("sibling is: "+sentence.getForm(sibling));
+				if(firstNodeint>sibint){
+					System.out.println("wrong!");
+				} else{
+					System.out.println("correct");
+				}
+				return "after"; //original
+//				return "before";
 			}
 		} return "none";
 			
@@ -586,17 +668,27 @@ public class Linearizer {
 				node[8].value = 1;
 			}
 			
-//			svm_model model = svm.svm_load_model("Classifiers/linearization_svm_siblings.svm.model");
-			svm_model model = svm.svm_load_model("new_siblings.svm.model");
+			svm_model model = svm.svm_load_model("Classifiers/linearization_svm_siblings.svm.model");
+//        	svm_model model = svm.svm_load_model("new_siblings.svm.model");
 			
 			double prediction = svm.svm_predict(model, node);
+			Integer firstNodeint = new Integer(firstNode);
+			Integer sibint = new Integer(sibling);
 			
 			if(prediction<0){ // -1 means firstNode goes after sibling.
-				
+				if(firstNodeint<sibint){
+					System.out.println("wrong!");
+				} else{
+					System.out.println("correct");
+				}
 				return "before";
 				
 			} else{ // 1 means that firstNode goes before the sibling.
-				
+				if(firstNodeint>sibint){
+					System.out.println("wrong!");
+				} else{
+					System.out.println("correct");
+				}
 				return "after";
 			}
 			
@@ -657,7 +749,7 @@ public class Linearizer {
 //				System.out.println(child+" goes before "+head);
 			} 
 			
-			
+			//TODO: REASON ABOUT AND TEST WHETHER MAKE TRANSITIVE FUNCTION WOULD HELP IF PUT IN FIRST FOR LOOP
 		}
 		
 		this.makeTransitive(sentence, beforeMap); 
@@ -670,7 +762,7 @@ public class Linearizer {
 			Iterator<String> sibit = siblings.iterator();
 			while(sibit.hasNext()){
 				String sibling = sibit.next();
-				String result = this.sideOrder(child, sibling, sentence, hyperNodeMap, beforeMap);
+				String result = this.sideOrder2(child, sibling, sentence, hyperNodeMap, beforeMap);
 				if(result.equals("before")){
 					
 					beforeMap.get(child).add(sibling);
@@ -683,6 +775,8 @@ public class Linearizer {
 					beforeMap.get(sibling).addAll(beforeMap.get(child));
 					this.makeTransitive(sentence, beforeMap);
 //					System.out.println(child+" goes before "+sibling+" "+beforeMap.toString());
+				} else{
+					this.makeTransitive(sentence, beforeMap);
 				}
 				
 			} 
@@ -828,7 +922,8 @@ public class Linearizer {
 		int sentences = 0;
 
 
-		Linearizer liner = new Linearizer("Sentences/Evaluation Set","relmap.ser","sideRelMap.ser");
+//		Linearizer liner = new Linearizer("Sentences/Evaluation Set","Current Best/relmap.ser","Current Best/sideRelMap.ser");
+		Linearizer liner = new Linearizer("Sentences/Evaluation Set","Current Best/relmap.ser","Current Best/sideRelMap.ser","Sibling Dep Files/Deprel/Object Files/sideFeatureDictDep101815.ser");
 
 		liner.startUp();
 		

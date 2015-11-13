@@ -357,6 +357,15 @@ public class CoNLLHash {
 		return maxDepthNode;
 	}
 	
+	public String sentenceToString(){
+		int sentenceLength = this.sentenceLength();
+		String sentence = "";
+		for(int i=1;i<sentenceLength+1;i++){      // Creates the ideal form of the sentence, in both array-ID form, and String form.
+			String word = this.getForm(""+i);
+			sentence+=" "+word;
+		}
+		return sentence;
+	}
 	// returns an array list with the words in their final 
 	public ArrayList<String> linearize(){
 		ArrayList<String> properOrder = new ArrayList<String>();
