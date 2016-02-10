@@ -322,6 +322,22 @@ public class CoNLLHash {
 		return maxDepthNode;
 	}
 	
+	public int getWeight(String ID){
+		ArrayList<String> children = this.getChilds(ID);
+		int count = 1;
+		if(children.size()==0){
+			return count;
+		} else{
+			Iterator<String> it = children.iterator();
+			while(it.hasNext()){
+				String child = it.next();
+				count = count + this.getWeight(child); 
+			}
+			return count;
+			
+		}
+	}
+	
 	/**
 	 * 
 	 * @return the node in the tree with the maximum depth, ie distance from the root.

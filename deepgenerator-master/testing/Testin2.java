@@ -21,7 +21,7 @@ public class Testin2 {
 	public static void main(String[] args) throws IOException {
 		// TODO Auto-generated method stub
 		
-		BufferedReader reader = new BufferedReader(new FileReader("Classifier Performance/Classifier Performance Round 2.rtf"));
+		BufferedReader reader = new BufferedReader(new FileReader("Classifier Performance/1000 Cluster POS Complex Output.rtf"));
 		Integer correct = new Integer(0);
 		Integer total = new Integer(0);
 		while(reader.ready()){

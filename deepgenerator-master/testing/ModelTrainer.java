@@ -32,14 +32,19 @@ public class ModelTrainer {
 
 	private String trainingFile;
 	private String testFile;
+	private String filepath;
 	private ModelLinearization linModel;
 	private ModelLinearization linModelPOS;
 	private ModelLinearization linModelDep;
 	private ModelLinearization linModelHeadDeprel;
 	private ArrayList<String> classList;
+	private HashMap<String,String> trainingSetDict; 
+	private HashMap<String,Integer> countingDict;
+	private HashMap<String,String> testingSetDict;
 	
 	
 //	TODO: CHANGE FILE SETTINGS OF FILES
+
 	public ModelTrainer(String filePath){
 		this.trainingFile = filePath;
 		linModel = new ModelLinearization();
@@ -50,9 +55,10 @@ public class ModelTrainer {
 	 * @param filePath: name of the file that will be used to create the training files.
 	 * @param testPath: name of the file that will be used to create the test files.
 	 */
-	public ModelTrainer(String filePath, String testPath){
+	public ModelTrainer(String filePath, String testPath,String location){
 		this.trainingFile = filePath;
 		this.testFile = testPath;
+		this.filepath = location;
 		linModel = new ModelLinearization();
 		linModelPOS = new ModelLinearization();
 		linModelDep = new ModelLinearization();
@@ -60,20 +66,22 @@ public class ModelTrainer {
 		
 	}
 	
-	public static void main(String [] args){
+	public static void main(String [] args) throws IOException{
 		Calendar cal = Calendar.getInstance();
 		SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
 	
-		ModelTrainer transducer = new ModelTrainer("Sentences/Bigger Training Set","Sentences/Smaller Testing Set");
+		ModelTrainer trainer = new ModelTrainer("Sentences/New Bigger Training Set","Sentences/New Small Testing Set", "December Vertical Files/Non Singleton/1000 Cluster POS Complex/");
+//		ModelTrainer transducer = new ModelTrainer("Sentences/TrainingSetHalf","Sentences/Smaller Testing Set");
 		System.out.println("Start Time: "+sdf.format(cal.getTime()));
-		System.out.println("Starting Dep Training");
+		System.out.println("Starting Training");
 //		transducer.linModelDep;
-		transducer.sideTrainingDep();
 		
-		System.out.println("Starting POS evaluation");
-		transducer.sideTestingDep();
+		trainer.training();
 		
-//		transducer.sideTesting();
+		System.out.println("Starting Testing");
+//		transducer.sideTestingDep();
+		
+		trainer.testing();
 
 		Calendar endCal = Calendar.getInstance();
 		SimpleDateFormat sdf1 = new SimpleDateFormat("HH:mm:ss");
@@ -698,8 +706,10 @@ public class ModelTrainer {
 	
 	/**
 	 * Creates a file to train the sibling classifier.
+	 * @throws IOException 
 	 */
-	public void generateSideTrainingFile(){
+	public void generateSideTrainingFile() throws IOException{
+		linModel.clusters("Clusters/1000 Clusters.rtf");
 		ArrayList<CoNLLHash> sentences = CoNLLTreeConstructor.storeTreebank(trainingFile);
 		boolean train = true;
 		Iterator<CoNLLHash> sentenceIt = sentences.iterator();
@@ -725,7 +735,7 @@ public class ModelTrainer {
 				while(sibIt.hasNext()){
 					String sibling = sibIt.next();
 					if(!checkedPairs.contains(sibling+word)){
-						linModel.addSideLine(word, sibling, sentence, train);
+						linModel.addSideLine(word, sibling, sentence, train, this.filepath);
 						checkedPairs.add(sibling+word);
 						checkedPairs.add(word+sibling);
 					}
@@ -769,7 +779,7 @@ public class ModelTrainer {
 				Iterator<String> sibIt = siblings.iterator();
 				while(sibIt.hasNext()){
 					String sibling = sibIt.next();
-					linModel.addSideLine(word, sibling, sentence, train);
+					linModel.addSideLine(word, sibling, sentence, train, this.filepath);
 					
 				}
 			}
@@ -787,8 +797,9 @@ public class ModelTrainer {
 	
 	/**
 	 * This method trains the sibling classifier.
+	 * @throws IOException 
 	 */
-	public void sideTraining(){
+	public void sideTraining() throws IOException{
 		this.generateSideTrainingFile();
 		System.out.println("Done generating training files, starting training");
 //		ArrayList<String> sibRelations = this.linModel.getSibRelations();
@@ -824,7 +835,7 @@ public class ModelTrainer {
 			args[25]="0";
 			args[26]="-q";
 			 
-			args[27]= "new_siblings.svm";
+			args[27]= this.filepath+"siblings.svm";
 			
 			try {
 				svm_train.main(args);
@@ -836,14 +847,20 @@ public class ModelTrainer {
 		
 //		}
 		HashMap<String,String> sideRels = linModel.getSideFeaturesDict();
+		HashMap<String,String> clusterDict = linModel.wordToCluster;
 	    try
         {
-               FileOutputStream fos = new FileOutputStream("sideRelMapDep.ser");
+               FileOutputStream fos = new FileOutputStream(this.filepath+"sideRelMapDec.ser");
+//               FileOutputStream fos2 = new FileOutputStream(this.filepath+clusterMapDec.ser");
                ObjectOutputStream oos = new ObjectOutputStream(fos);
+//               ObjectOutputStream oos2 = new ObjectOutputStream(fos);
                oos.writeObject(sideRels);
+//               oos2.writeObject(clusterDict);
                oos.close();
+//               oos2.close();
                fos.close();
-               System.out.println("Serialized HashMap data is saved in sideRelMapNew.ser");
+//               fos2.close();
+               System.out.println("Serialized HashMap data is saved in sideRelMapDec.ser");
         }catch(IOException ioe)
          {
                ioe.printStackTrace();
@@ -855,7 +872,7 @@ public class ModelTrainer {
 	 * This method evaluates the performance of the sibling classifier.
 	 */
 	public void sideTesting(){
-//		this.generateSideTestingFile();
+		this.generateSideTestingFile();
 //		ArrayList<String> sibTrainRelations = this.linModel.getSibRelations();
 //		ArrayList<String> testRelations = this.linModel.getTestSibRelations();
 //		Iterator<String> relIt = testRelations.iterator();
@@ -865,9 +882,9 @@ public class ModelTrainer {
 //			if(sibTrainRelations.contains(relation)){
 				System.out.println("Siblings");
 				String[] args = new String[4];
-				args[0] = "Sibling Testing Files/DT_siblings_test.svm";
-				args[1] = "new_siblings.svm.model";
-				args[2] = "linearization_output_siblings.svm";
+				args[0] = this.filepath+"siblings_test.svm";
+				args[1] = "siblings.svm.model";
+				args[2] = this.filepath+"siblings_output.svm";
 				try {
 					svm_predict.main(args);
 				} catch (IOException e) {
@@ -880,8 +897,10 @@ public class ModelTrainer {
 	
 	/**
 	 * Creates files to train the dependency relation classifiers.
+	 * @throws IOException 
 	 */
-	public void generateTrainingFiles(){
+	public void generateTrainingFiles() throws IOException{
+		linModel.clusters("Clusters/1000 Clusters.rtf");
 		ArrayList<CoNLLHash> sentences = CoNLLTreeConstructor.storeTreebank(trainingFile);
 		boolean train = true;
 		Iterator<CoNLLHash> sentenceIt = sentences.iterator();
@@ -898,7 +917,7 @@ public class ModelTrainer {
 				if(!sentence.getDeprel(nextNode).equals("ROOT")){
 					String head = sentence.getHead(nextNode);
 						
-						linModel.addLine(nextNode, sentence, train);
+						linModel.addLine(nextNode, sentence, train, this.filepath);
 						
 					
 					if(!checkedNodes.contains(head)){
@@ -915,12 +934,22 @@ public class ModelTrainer {
 		String output = ""+sentenceNum;
 		System.out.println(output+" training sentences");
 		linModel.closeBuffers(train);
+		ArrayList<String> relations = this.linModel.getRelations();
+		HashMap<String,String>numToWord = this.linModel.getBackwardsFeatureDict();
+		this.trainingSetDict = numToWord;
+//		Singleton single = new Singleton(relations,"Base",numToWord,true);
+//		single.countFeatures();
+//		single.writeFiles();
+//		this.countingDict = single.getCountDict();
+//		single.checker();
+//		single.fixer();
 	}
 	
 	/**
 	 * Creates test files to evaluate the accuracy of the dependency relation classifiers.
+	 * @throws IOException 
 	 */
-	public void generateTestingFiles(){
+	public void generateTestingFiles() throws IOException{
 		
 		ArrayList<CoNLLHash> sentences = CoNLLTreeConstructor.storeTreebank(testFile);
 		boolean train = false;
@@ -938,7 +967,7 @@ public class ModelTrainer {
 				if(!sentence.getDeprel(nextNode).equals("ROOT")){
 					String head = sentence.getHead(nextNode);
 					
-						linModel.addLine(nextNode, sentence, train);
+						linModel.addLine(nextNode, sentence, train, this.filepath);
 					
 					if(!checkedNodes.contains(head)){
 						queue.addLast(head);
@@ -954,6 +983,10 @@ public class ModelTrainer {
 		String numOfSent = ""+sentenceNum;
 		System.out.println(numOfSent+" testing sentences");
 		linModel.closeBuffers(train);
+		ArrayList<String> relationss = linModel.getTestRelations();
+//		this.testingSetDict = linModel.getBackwardsFeatureDict();
+//		Singleton single = new Singleton(relationss,"Base",this.trainingSetDict,this.countingDict,false);
+//		single.writeTestFiles(this.testingSetDict);
 		
 		
 	}
@@ -962,8 +995,10 @@ public class ModelTrainer {
 	 * This method evaluates the performance of all of the classifiers for which test files were made.
 	 * It prints out the accuracy of each classifier in classifying the given test set. It also prints
 	 * all the relations for which test files were made
+	 * @throws IOException 
 	 */
-	public void testing(){
+	public void testing() throws IOException{
+
 		this.generateTestingFiles();
 		ArrayList<String> trainRelations = this.linModel.getRelations();
 		ArrayList<String> relations = this.linModel.getTestRelations();
@@ -974,9 +1009,9 @@ public class ModelTrainer {
 			if(trainRelations.contains(relation)){
 				System.out.println(relation);
 				String[] args = new String[4];
-				args[0] = "NewTesting/test_"+relation+".svm";
-				args[1] = "train_"+relation+".svm.model";
-				args[2] = "linearization_output_"+relation+".svm";
+				args[0] = this.filepath+"Testing Files/"+relation+".svm";
+				args[1] = relation+".svm.model";
+				args[2] = this.filepath+"Output Files/"+relation+"_output.svm";
 				try {
 					svm_predict.main(args);
 				} catch (IOException e) {
@@ -989,14 +1024,16 @@ public class ModelTrainer {
 	
 	/**
 	 * This method trains classifiers for all the relations that appear in a training set.
+	 * @throws IOException 
 	 */
-	public void training(){
+	public void training() throws IOException{
 		this.generateTrainingFiles();
 		
 		ArrayList<String> relations = this.linModel.getRelations();
 		Iterator<String> it = relations.iterator();
 		while(it.hasNext()){
 			String relation = it.next();
+			System.out.println(relation);
 			String[] args = new String[28];
 			args[0]="-s";
 			args[1]="0";
@@ -1026,7 +1063,9 @@ public class ModelTrainer {
 			args[25]="0";
 			args[26]="-q";
 			 
-			args[27]= "NewTraining/train_"+relation+".svm";
+//			args[27]= "December Vertical Files/Non Singleton/100 Cluster/Training Files/"+relation+".svm";
+			args[27]= this.filepath +"Training Files/"+relation+".svm";
+//			args[27]= this.filepath +"vertical.svm";
 			
 			try {
 				svm_train.main(args);
@@ -1038,14 +1077,31 @@ public class ModelTrainer {
 		}
 		
 		HashMap<String,String> rels = linModel.getFeaturesDict();
+		ArrayList<String> relationss = this.linModel.getRelations();
+		HashMap<String, String> clusterDict = linModel.wordToCluster;
+		
 	    try
         {
-               FileOutputStream fos = new FileOutputStream("relmap2.ser");
+//               FileOutputStream fos = new FileOutputStream("December Vertical Files/Non Singleton/100 Cluster/relmapDec.ser");
+//               FileOutputStream fos2 = new FileOutputStream("December Vertical Files/Non Singleton/100 Cluster/relListDec.ser");
+               FileOutputStream fos = new FileOutputStream(this.filepath+"relmapDec.ser");
+               FileOutputStream fos2 = new FileOutputStream(this.filepath+"relListDec.ser");
+               FileOutputStream fos3 = new FileOutputStream(this.filepath+"clusterMapDec.ser");
                ObjectOutputStream oos = new ObjectOutputStream(fos);
+               ObjectOutputStream oos2 = new ObjectOutputStream(fos2);
+               ObjectOutputStream oos3 = new ObjectOutputStream(fos3);
                oos.writeObject(rels);
+               oos2.writeObject(relationss);
+               oos3.writeObject(clusterDict);
+    
                oos.close();
+               oos2.close();
+               oos3.close();
                fos.close();
-               System.out.println("Serialized HashMap data is saved in relmap2.ser");
+               fos2.close();
+               fos3.close();
+               System.out.println("Serialized HashMap data is saved in relmapDec.ser");
+               System.out.println("Serialized List data is saved in relListDec.ser");
         }catch(IOException ioe)
          {
                ioe.printStackTrace();
